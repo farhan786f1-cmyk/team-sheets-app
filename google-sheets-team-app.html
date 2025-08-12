@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Data Portal - Google Sheets Integration</title>
+    
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+            transition: transform 0.3s ease;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* Login Section */
+        #loginSection {
+            text-align: center;
+        }
+
+        .login-message {
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        #g_id_onload {
+            display: flex;
+            justify-content: center;
+        }
+
+        /* User Info Section */
+        #userInfo {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .user-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin-bottom: 10px;
+        }
+
+        .user-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .user-email {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        /* Form Section */
+        #formSection {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        /* Setup Instructions */
+        .setup-instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .setup-instructions h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .setup-instructions ol {
+            margin-left: 20px;
+            color: #856404;
+            font-size: 14px;
+        }
+
+        .setup-instructions li {
+            margin-bottom: 8px;
+        }
+
+        .setup-instructions code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>📊 Team Data Portal</h1>
+            <p>Secure Google Sheets Integration</p>
+        </div>
+
+        <!-- Login Section -->
+        <div id="loginSection">
+            <div class="login-message">
+                <h2>Welcome!</h2>
+                <p style="margin-top: 10px;">Please sign in with your Google account to continue</p>
+            </div>
+            
+            <!-- Google Sign In Button -->
+            <div id="g_id_onload"
+                 data-client_id="YOUR_CLIENT_ID.apps.googleusercontent.com"
+                 data-callback="handleCredentialResponse"
+                 data-auto_prompt="false">
+            </div>
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-size="large"
+                 data-theme="outline"
+                 data-text="sign_in_with"
+                 data-shape="rectangular"
+                 data-logo_alignment="left">
+            </div>
+        </div>
+
+        <!-- User Info Section -->
+        <div id="userInfo">
+            <img class="user-avatar" id="userAvatar" src="" alt="User Avatar">
+            <div class="user-name" id="userName"></div>
+            <div class="user-email" id="userEmail"></div>
+            <button class="logout-btn" onclick="signOut()">Sign Out</button>
+        </div>
+
+        <!-- Form Section -->
+        <div id="formSection">
+            <form id="dataForm" onsubmit="submitForm(event)">
+                <div class="form-group">
+                    <label for="projectName">Project Name *</label>
+                    <input type="text" id="projectName" name="projectName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="category">Category *</label>
+                    <select id="category" name="category" required>
+                        <option value="">Select a category</option>
+                        <option value="Development">Development</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Support">Support</option>
+                        <option value="Research">Research</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="status">Status *</label>
+                    <select id="status" name="status" required>
+                        <option value="">Select status</option>
+                        <option value="Planning">Planning</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Review">Review</option>
+                        <option value="Completed">Completed</option>
+                        <option value="On Hold">On Hold</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="priority">Priority *</label>
+                    <select id="priority" name="priority" required>
+                        <option value="">Select priority</option>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                        <option value="Critical">Critical</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" placeholder="Enter project details..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="deadline">Deadline</label>
+                    <input type="date" id="deadline" name="deadline">
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">Submit to Google Sheets</button>
+            </form>
+
+            <div class="spinner" id="loadingSpinner"></div>
+            <div id="statusMessage" class="status-message"></div>
+        </div>
+
+        <!-- Setup Instructions -->
+        <div class="setup-instructions" id="setupInstructions">
+            <h3>⚙️ Setup Required:</h3>
+            <ol>
+                <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
+                <li>Create a new project or select existing one</li>
+                <li>Enable Google Sheets API and Google Identity API</li>
+                <li>Create OAuth 2.0 credentials (Web application)</li>
+                <li>Add your domain to authorized JavaScript origins</li>
+                <li>Replace <code>YOUR_CLIENT_ID</code> in this file with your actual Client ID</li>
+                <li>Create a Google Sheet and get its ID from the URL</li>
+                <li>Replace <code>YOUR_SPREADSHEET_ID</code> with your Sheet ID</li>
+                <li>Share the Google Sheet with your team members</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // ===== CONFIGURATION - ADD YOUR CREDENTIALS HERE =====
+        // Step 1: Replace with your Google OAuth Client ID (ends with .apps.googleusercontent.com)
+        // Step 2: Replace with your Google API Key (starts with AIza...)
+        // Step 3: Replace with your Google Sheet ID (long string from sheet URL)
+        
+        const CONFIG = {
+            CLIENT_ID: '540633111366-6007un154pacnh20qppgv82aoml4ccks.apps.googleusercontent.com', // ← REPLACE THIS
+            API_KEY: 'AIzaSyCEnTRtNPsDpZ_-mh-aiPiTfkQf2m3gHG8', // ← REPLACE THIS (Optional but recommended)
+            SPREADSHEET_ID: '1VJA2Co5B_cjxILs7gdxt6BWuYGVcTL7R6nNEeG21Owc', // ← REPLACE THIS
+            SHEET_NAME: 'Sheet1', // ← Change if using different sheet name
+            DISCOVERY_DOC: 'https://sheets.googleapis.com/$discovery/rest?version=v4',
+            SCOPES: 'https://www.googleapis.com/auth/spreadsheets'
+        };
+
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+        let currentUser = null;
+
+        // Initialize Google API
+        function gapiLoaded() {
+            gapi.load('client', initializeGapiClient);
+        }
+
+        async function initializeGapiClient() {
+            await gapi.client.init({
+                apiKey: CONFIG.API_KEY,
+                discoveryDocs: [CONFIG.DISCOVERY_DOC],
+            });
+            gapiInited = true;
+        }
+
+        // Handle Google Sign-In response
+        function handleCredentialResponse(response) {
+            // Decode JWT token to get user info
+            const responsePayload = decodeJwtResponse(response.credential);
+            
+            currentUser = {
+                name: responsePayload.name,
+                email: responsePayload.email,
+                picture: responsePayload.picture,
+                token: response.credential
+            };
+
+            // Update UI
+            displayUserInfo(currentUser);
+            
+            // Request additional scope for Sheets API
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CONFIG.CLIENT_ID,
+                scope: CONFIG.SCOPES,
+                callback: (response) => {
+                    if (response.error !== undefined) {
+                        throw (response);
+                    }
+                    // Access token acquired, user can now submit data
+                    showMessage('Successfully authenticated! You can now submit data.', 'success');
+                },
+            });
+
+            // Request access token
+            tokenClient.requestAccessToken({prompt: 'consent'});
+        }
+
+        // Decode JWT token
+        function decodeJwtResponse(token) {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        }
+
+        // Display user information
+        function displayUserInfo(user) {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('userInfo').style.display = 'block';
+            document.getElementById('formSection').style.display = 'block';
+            document.getElementById('setupInstructions').style.display = 'none';
+            
+            document.getElementById('userAvatar').src = user.picture;
+            document.getElementById('userName').textContent = user.name;
+            document.getElementById('userEmail').textContent = user.email;
+        }
+
+        // Sign out
+        function signOut() {
+            google.accounts.id.disableAutoSelect();
+            currentUser = null;
+            
+            // Reset UI
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('userInfo').style.display = 'none';
+            document.getElementById('formSection').style.display = 'none';
+            document.getElementById('setupInstructions').style.display = 'block';
+            
+            // Clear form
+            document.getElementById('dataForm').reset();
+            showMessage('You have been signed out.', 'info');
+        }
+
+        // Submit form to Google Sheets
+        async function submitForm(event) {
+            event.preventDefault();
+            
+            if (!currentUser) {
+                showMessage('Please sign in first.', 'error');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            const spinner = document.getElementById('loadingSpinner');
+            
+            submitBtn.disabled = true;
+            spinner.style.display = 'block';
+
+            // Get form data
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData);
+            
+            // Add metadata
+            data.submittedBy = currentUser.email;
+            data.submittedAt = new Date().toISOString();
+            data.submitterName = currentUser.name;
+
+            try {
+                // Prepare values for Google Sheets
+                const values = [[
+                    data.submittedAt,
+                    data.submitterName,
+                    data.submittedBy,
+                    data.projectName,
+                    data.category,
+                    data.status,
+                    data.priority,
+                    data.description,
+                    data.deadline
+                ]];
+
+                // Make API request to append data
+                const response = await gapi.client.sheets.spreadsheets.values.append({
+                    spreadsheetId: CONFIG.SPREADSHEET_ID,
+                    range: `${CONFIG.SHEET_NAME}!A:I`,
+                    valueInputOption: 'USER_ENTERED',
+                    resource: {
+                        values: values
+                    }
+                });
+
+                if (response.status === 200) {
+                    showMessage('✅ Data successfully submitted to Google Sheets!', 'success');
+                    event.target.reset();
+                } else {
+                    throw new Error('Failed to submit data');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('❌ Error submitting data. Please check your setup and try again.', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                spinner.style.display = 'none';
+            }
+        }
+
+        // Show status message
+        function showMessage(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message ${type}`;
+            statusDiv.style.display = 'block';
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Load Google APIs on page load
+        window.onload = function() {
+            // Check if configuration is set
+            if (CONFIG.CLIENT_ID === 'YOUR_CLIENT_ID.apps.googleusercontent.com') {
+                showMessage('Please configure your Google API credentials first.', 'info');
+            }
+        };
+    </script>
+    
+    <!-- Load Google API -->
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+</body>
+</html>
